@@ -5,8 +5,9 @@ import yaml
 from addict import Dict
 
 from mindspore import nn, ops
-
+import mindspore as ms
 from .resnet import ShapeSpec, build_resnet_backbone
+
 
 # from resnet import ShapeSpec, build_resnet_backbone
 
@@ -72,11 +73,19 @@ class FPN(nn.Cell):
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
 
-        self.lateral_convs = nn.SequentialCell(lateral_convs[::-1])
-        self.output_convs = nn.SequentialCell(output_convs[::-1])
+        self.lateral_convs = nn.CellList(lateral_convs[::-1])
+        self.output_convs = nn.CellList(output_convs[::-1])
+
+        # self.lateral_convs = lateral_convs[::-1]
+        # self.output_convs = output_convs[::-1]
+
+        # self.lateral_conv = self.lateral_convs[0]
+        # self.output_conv = self.output_convs[0]
 
         self.top_block = top_block
         self.in_features = tuple(in_features)
+        print("self.in_features---------", self.in_features, flush=True)
+        print("self.self.in_features[-1]---------", self.in_features[-1], flush=True)
         self.bottom_up = bottom_up
 
         self._out_feature_strides = {"p{}".format(int(math.log2(s))): s for s in strides}
@@ -111,7 +120,8 @@ class FPN(nn.Cell):
         bottom_up_features = self.bottom_up(x)
 
         results = []
-        prev_features = self.lateral_convs[0](bottom_up_features[self.in_features[-1]])
+        bottom_up_feature = bottom_up_features.get(self.in_features[-1])
+        prev_features = self.lateral_convs[0](bottom_up_feature)
         results.append(self.output_convs[0](prev_features))
 
         for idx, (lateral_conv, output_conv) in enumerate(zip(self.lateral_convs, self.output_convs)):
@@ -119,6 +129,11 @@ class FPN(nn.Cell):
                 features = self.in_features[-idx - 1]
                 features = bottom_up_features[features]
                 old_shape = list(prev_features.shape)[2:]
+                # new_size_list = []
+                # for i in old_shape:
+                #     new_size_list.append(2 * i)
+                # new_size_tuple = tuple(new_size_list)
+                # top_down_features = self._interpolate(prev_features, size=new_size_tuple, mode="nearest")
                 new_size = tuple([2 * i for i in old_shape])
                 top_down_features = self._interpolate(prev_features, size=new_size, mode="nearest")
                 lateral_features = lateral_conv(features)
@@ -131,8 +146,9 @@ class FPN(nn.Cell):
                 top_block_in_feature = bottom_up_features[self.top_block.in_feature]
             else:
                 top_block_in_feature = results[self._out_features.index(self.top_block.in_feature)]
-            results.extend(self.top_block(top_block_in_feature))
+            results.extend(self.top_block(top_block_in_feature.astype(ms.float16)))
 
         assert len(self._out_features) == len(results)
 
-        return {f: res for f, res in zip(self._out_features, results)}
+        # return {f: res for f, res in zip(self._out_features, results)}
+        return tuple([(f, res) for f, res in zip(self._out_features, results)])

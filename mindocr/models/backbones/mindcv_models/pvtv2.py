@@ -147,6 +147,7 @@ class Attention(nn.Cell):
 
         else:
             x_ = ops.reshape(ops.transpose(x, (0, 2, 1)), (B, C, H, W))
+            print("222222222222222222222222222",flush=True)
             x_ = self.sr(self.pool(x_))
             x_ = ops.reshape(ops.transpose(x_, (0, 2, 1)), (B, C, -1))
             x_ = self.norm(x_)

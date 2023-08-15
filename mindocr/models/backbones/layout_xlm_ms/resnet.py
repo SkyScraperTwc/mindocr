@@ -305,7 +305,7 @@ class ResNet(nn.Cell):
         Returns:
             dict[str->Tensor]: names and the corresponding features
         """
-        assert x.dim() == 4, f"ResNet takes an input of shape (N, C, H, W). Got {x.shape} instead!"
+        # assert x.dim() == 4, f"ResNet takes an input of shape (N, C, H, W). Got {x.shape} instead!"
         outputs = {}
         x = self.stem(x)
         if "stem" in self._out_features:
@@ -321,6 +321,14 @@ class ResNet(nn.Cell):
             if "linear" in self._out_features:
                 outputs["linear"] = x
         return outputs
+
+    def output_shape(self):
+        return {
+            name: ShapeSpec(
+                channels=self._out_feature_channels[name], stride=self._out_feature_strides[name]
+            )
+            for name in self._out_features
+        }
 
     def output_shape(self):
         return {
