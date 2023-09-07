@@ -1,8 +1,8 @@
 system:
-  mode: 1 # 0 for graph mode, 1 for pynative mode in MindSpore
+  mode: 0 # 0 for graph mode, 1 for pynative mode in MindSpore
   distribute: False
   amp_level: 'O0'
-  seed: 42
+  seed: 2022
   # log_interval: 10
   val_while_train: True
   drop_overflow_update: False
@@ -11,22 +11,20 @@ model:
   type: kie
   transform: null
   backbone:
-    name: layoutxlm_for_ser
+    name: layoutxlm_for_re
     pretrained: True
     checkpoints:
-    num_classes: &num_classes 7
 
 postprocess:
-  name: VQASerTokenLayoutLMPostProcess
+  name: VQAReTokenLayoutLMPostProcess
   class_path: &class_path train_data/xfund/class_list_xfun.txt
 
 metric:
-  name: VQASerTokenMetric
+  name: VQAReTokenMetric
   main_indicator: hmean
 
 loss:
-  name: VQASerTokenLayoutLMLoss
-  num_classes: *num_classes
+  name: LossFromOutput
   key: "backbone_out"
 
 scheduler:
@@ -34,15 +32,18 @@ scheduler:
   lr: 0.00005
   min_lr: 0.0000002
   num_epochs: 200
-  warmup_epochs: 2
+  warmup_epochs: 10
 
 optimizer:
   opt: adam
+  beta1: 0.9
+  beta2: 0.999
+  clip_norm: 10
   filter_bias_and_bn: False
   weight_decay: 0.0005
 
 train:
-  ckpt_save_dir: './tmp_kie_ser'
+  ckpt_save_dir: './tmp_kie_re'
   dataset_sink_mode: False
   dataset:
     type: KieDataset
@@ -55,35 +56,37 @@ train:
           img_mode: RGB
           to_float32: False
       - VQATokenLabelEncode:
-          contains_re: False
+          contains_re: True
           algorithm: &algorithm LayoutXLM
           class_path: *class_path
       - VQATokenPad:
           max_seq_len: &max_seq_len 512
           return_attention_mask: True
-      - VQASerTokenChunk:
+      - VQAReTokenRelation:
+      - VQAReTokenChunk:
           max_seq_len: *max_seq_len
+      - TensorizeEntitiesRelations:
       - LayoutResize:
           size: [ 224, 224 ]
       - NormalizeImage:
           bgr_to_rgb: False
           is_hwc: True
-          mean: imagenet
-          std: imagenet
+          mean: [ 123.675, 116.28, 103.53 ]
+          std: [ 58.395, 57.12, 57.375 ]
       - ToCHWImage:
-    #  the order of the dataloader list, matching the network input and the input labels for the loss function, and optional data for debug/visualize
-    output_columns: [ 'input_ids', 'bbox','attention_mask','token_type_ids', 'image', 'labels' ]
-    net_input_column_index: [ 0, 1, 2, 3, 4 ] # input indices for network forward func in output_columns
-    label_column_index: [ 2, 5 ] # input indices marked as label
+      #  the order of the dataloader list, matching the network input and the input labels for the loss function, and optional data for debug/visualize
+    output_columns: [ 'input_ids', 'bbox','attention_mask', 'token_type_ids', 'image', 'entities', 'relations' ]
+    net_input_column_index: [ 0, 1, 2, 3, 4, 5, 6 ] # input indices for network forward func in output_columns
+    label_column_index: [ 5, 6 ] # input indices marked as label
 
   loader:
     shuffle: True
-    batch_size: 8
+    batch_size: 4
     drop_remainder: True
     num_workers: 8
 
 eval:
-  ckpt_load_path: './tmp_kie_ser/best.ckpt'
+  ckpt_load_path: './tmp_kie_re/best.ckpt'
   dataset_sink_mode: False
   dataset:
     type: KieDataset
@@ -97,30 +100,32 @@ eval:
           img_mode: RGB
           to_float32: False
       - VQATokenLabelEncode:
-          contains_re: False
+          contains_re: True
           algorithm: *algorithm
           class_path: *class_path
       - VQATokenPad:
           max_seq_len: *max_seq_len
           return_attention_mask: True
-      - VQASerTokenChunk:
+      - VQAReTokenRelation:
+      - VQAReTokenChunk:
           max_seq_len: *max_seq_len
+      - TensorizeEntitiesRelations:
       - LayoutResize:
           size: [ 224, 224 ]
       - NormalizeImage:
           bgr_to_rgb: False
           is_hwc: True
-          mean: imagenet
-          std: imagenet
+          mean: [ 123.675, 116.28, 103.53 ]
+          std: [ 58.395, 57.12, 57.375 ]
       - ToCHWImage:
-    #  the order of the dataloader list, matching the network input and the labels for evaluation
-    output_columns: [ 'input_ids', 'bbox', 'attention_mask','token_type_ids','image', 'labels' ]
-    net_input_column_index: [ 0, 1, 2, 3, 4 ] # input indices for network forward func in output_columns
-    label_column_index: [ 2, 5 ] # input indices marked as label
+      #  the order of the dataloader list, matching the network input and the labels for evaluation
+    output_columns: [ 'input_ids', 'bbox','attention_mask', 'token_type_ids', 'image', 'entities', 'relations' ]
+    net_input_column_index: [ 0, 1, 2, 3, 4, 5, 6 ] # input indices for network forward func in output_columns
+    label_column_index: [ 5, 6 ] # input indices marked as label
   #    num_keys_of_labels: 2 # num labels
 
   loader:
     shuffle: False
-    batch_size: 1
+    batch_size: 4
     drop_remainder: False
     num_workers: 1

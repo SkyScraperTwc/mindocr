@@ -2,7 +2,7 @@ from ....data_process.utils import gear_utils
 from ....infer import TaskType, TextRecognizer
 from ...datatype import ProcessData
 from ...framework import ModuleBase
-
+from ....utils import log
 
 class RecPreNode(ModuleBase):
     def __init__(self, args, msg_queue):
@@ -35,6 +35,8 @@ class RecPreNode(ModuleBase):
         _, split_data = self.text_recognizer.preprocess(images)
 
         # len(images) <= rec_batch_num, so len(split_data) == 1
+        log.info(f"process--pre---{input_data.image_path}---")
+
         send_data = ProcessData(
             data=split_data[0],
             image_path=input_data.image_path,

@@ -2,7 +2,6 @@ from ....data_process.utils import cv_utils
 from ....infer import TaskType, TextDetector
 from ...framework import ModuleBase
 
-
 class DetPostNode(ModuleBase):
     def __init__(self, args, msg_queue):
         super(DetPostNode, self).__init__(args, msg_queue)

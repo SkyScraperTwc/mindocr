@@ -49,6 +49,31 @@ from mindocr.utils.logger import set_logger
 logger = logging.getLogger("mindocr.export")
 
 
+def generate_kie_inputs(data_shape):
+    h, w = data_shape
+    bs, c = 1, 3
+    x0 = ms.Tensor(np.ones([1, 512]), dtype=ms.int64)
+    x1 = ms.Tensor(np.ones([1, 512, 4]), dtype=ms.int64)
+    x2 = ms.Tensor(np.ones([1, 512]), dtype=ms.int64)
+    x3 = ms.Tensor(np.ones([1, 512]), dtype=ms.int64)
+    x4 = ms.Tensor(np.ones([bs, c, h, w]), dtype=ms.float32)
+    inputs = [x0, x1, x2, x3, x4]
+    return inputs
+
+
+def generate_common_inputs(data_shape, is_dynamic_shape, model_type):
+    if is_dynamic_shape:
+        if model_type == "det":
+            x = ms.Tensor(shape=[None, 3, None, None], dtype=ms.float32)
+        else:
+            x = ms.Tensor(shape=[None, 3, 32, None], dtype=ms.float32)
+    else:
+        h, w = data_shape
+        bs, c = 1, 3
+        x = ms.Tensor(np.ones([bs, c, h, w]), dtype=ms.float32)
+    return x
+
+
 def export(name_or_config, data_shape, local_ckpt_path, save_dir, is_dynamic_shape, model_type):
     ms.set_context(mode=ms.GRAPH_MODE)  # , device_target="Ascend")
     set_logger(name="mindocr")
@@ -70,25 +95,19 @@ def export(name_or_config, data_shape, local_ckpt_path, save_dir, is_dynamic_sha
         net = build_model(model_cfg, pretrained=True, amp_level=amp_level)
 
     logger.info(f"Set the AMP level of the model to be `{amp_level}`.")
-
     net.set_train(False)
 
-    if is_dynamic_shape:
-        if model_type == "det":
-            x = ms.Tensor(shape=[None, 3, None, None], dtype=ms.float32)
-        else:
-            x = ms.Tensor(shape=[None, 3, 32, None], dtype=ms.float32)
+    if model_type == "kie":
+        inputs = generate_kie_inputs(data_shape)
     else:
-        h, w = data_shape
-        bs, c = 1, 3
-        x = ms.Tensor(np.ones([bs, c, h, w]), dtype=ms.float32)
+        inputs = generate_common_inputs(data_shape, is_dynamic_shape, model_type)
 
     output_path = os.path.join(save_dir, name) + ".mindir"
-    ms.export(net, x, file_name=output_path, file_format="MINDIR")
+    ms.export(net, *inputs, file_name=output_path, file_format="MINDIR")
 
     logger.info(
         f"=> Finish exporting mindir file of {name} to {os.path.realpath(output_path)}."
-        f"The data shape (N, C, H, W) is {x.shape}."
+        f"The data shape (N, C, H, W) is {inputs}."
     )
 
 
@@ -98,7 +117,7 @@ def check_args(args):
             args.model_name
         ), f"YAML config file '{args.model_name}' does not exist. Please check arg `model_name`."
         assert (
-            args.local_ckpt_path is not None
+                args.local_ckpt_path is not None
         ), "Local checkpoint path must be specified if using YAML config file to define model architecture. \
         Please set arg `local_ckpt_path`."
     if args.local_ckpt_path and not os.path.isfile(args.local_ckpt_path):
@@ -109,11 +128,11 @@ def check_args(args):
         os.makedirs(args.save_dir, exist_ok=True)
     if args.is_dynamic_shape:
         assert (
-            args.model_type is not None
+                args.model_type is not None
         ), "You are exporting mindir with dynamic data shape. Please set arg `model_type` as det, rec or cls."
     else:
         assert (
-            args.data_shape is not None
+                args.data_shape is not None
         ), "You are exporting mindir with static data shape. Please set arg `data_shape`."
 
 
@@ -135,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_type",
         type=str,
-        choices=["det", "rec", "cls"],
+        choices=["det", "rec", "cls", "kie"],
         help="Model type. Required when arg `is_dynamic_shape` is True.",
     )
     parser.add_argument(

@@ -1,5 +1,6 @@
 from ....infer import TextDetector
 from ...framework import ModuleBase
+from ....utils import log
 
 
 class DetInferNode(ModuleBase):
@@ -16,6 +17,7 @@ class DetInferNode(ModuleBase):
         if input_data.skip:
             self.send_to_next_module(input_data)
             return
+        log.info(f"process-----det_infer_node.py---")
 
         data = input_data.data
         pred = self.text_detector.model_infer(data)

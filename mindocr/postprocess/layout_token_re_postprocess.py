@@ -9,21 +9,22 @@ class VQAReTokenLayoutLMPostProcess:
     def __init__(self, **kwargs):
         super(VQAReTokenLayoutLMPostProcess, self).__init__()
 
-    def __call__(self, preds, label=None, *args, **kwargs):
+    def __call__(self, preds, **kwargs):
+        label = kwargs["labels"]
         pred_relations = preds["pred_relations"]
         if isinstance(preds["pred_relations"], ms.Tensor):
             pred_relations = pred_relations.numpy()
         pred_relations = self.decode_pred(pred_relations)
 
         if label is not None:
-            return self._metric(pred_relations, label)
+            return self._metric(pred_relations)
         else:
-            return self._infer(pred_relations, *args, **kwargs)
+            return self._infer(pred_relations, **kwargs)
 
-    def _metric(self, pred_relations, label):
-        return pred_relations, label[-1], label[-2]
+    def _metric(self, pred_relations):
+        return pred_relations
 
-    def _infer(self, pred_relations, *args, **kwargs):
+    def _infer(self, pred_relations, **kwargs):
         ser_results = kwargs["ser_results"]
         entity_idx_dict_batch = kwargs["entity_idx_dict_batch"]
 

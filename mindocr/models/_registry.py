@@ -26,6 +26,7 @@ def register_model(fn):
 
     # add model to __all__ in module
     model_name = fn.__name__
+    print("model_name----", model_name)
     if hasattr(mod, '__all__'):
         mod.__all__.append(model_name)
     else:
@@ -49,7 +50,7 @@ def list_models(filter='', module='', pretrained=False, exclude_filters=''):
         all_models = list(_module_to_models[module])
     else:
         all_models = _model_entrypoints.keys()
-
+        print("all_models-----", all_models)
     if filter:
         models = []
         include_filters = filter if isinstance(filter, (tuple, list)) else [filter]
