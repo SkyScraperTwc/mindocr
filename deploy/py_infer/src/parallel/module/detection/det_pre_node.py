@@ -1,6 +1,6 @@
 from ....infer import TaskType, TextDetector
 from ...framework import ModuleBase
-
+from ....utils import log
 
 class DetPreNode(ModuleBase):
     def __init__(self, args, msg_queue):
@@ -15,6 +15,8 @@ class DetPreNode(ModuleBase):
         return self.text_detector.get_params()
 
     def process(self, input_data):
+        log.info(f"process-----det_pre_node.py---")
+
         if input_data.skip:
             self.send_to_next_module(input_data)
             return

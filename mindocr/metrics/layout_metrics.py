@@ -51,8 +51,16 @@ class VQAReTokenMetric(nn.Metric):
         self.all_reduce = AllReduce(reduce="sum") if device_num > 1 else None
         self.metric_names = ["precision", "recall", "hmean"]
 
-    def update(self, *inputs):
-        pred_relations, relations, entities = inputs
+    def update(self, preds, gt):
+        # for inp in inputs:
+        #     print("inp----", inp)
+        # pred_relations, relations, entities = preds
+        pred_relations = preds
+        relations = gt[1]
+        entities = gt[0]
+        print("pred_relations------", pred_relations)
+        print("relations------", relations)
+        print("entities------", entities)
         self.pred_relations_list.extend(pred_relations)
         self.relations_list.extend(relations)
         self.entities_list.extend(entities)
@@ -112,7 +120,8 @@ class VQAReTokenMetric(nn.Metric):
 
         relation_types = [v for v in [0, 1] if not v == 0]
         scores = {rel: {"tp": 0, "fp": 0, "fn": 0} for rel in relation_types + ["ALL"]}
-
+        print("pred_relations----", pred_relations)
+        print("gt_relations----", gt_relations)
         # Count TP, FP and FN per type
         for pred_sent, gt_sent in zip(pred_relations, gt_relations):
             for rel_type in relation_types:
@@ -131,8 +140,20 @@ class VQAReTokenMetric(nn.Metric):
 
                 # boundaries mode only takes argument spans into account
                 elif mode == "boundaries":
-                    pred_rels = {(rel["head"], rel["tail"]) for rel in pred_sent if rel["type"] == rel_type}
-                    gt_rels = {(rel["head"], rel["tail"]) for rel in gt_sent if rel["type"] == rel_type}
+                    pred_rels = {(rel["head"], rel["tail"]) for rel in pred_sent if
+                                 rel["type"] == rel_type}
+                    gt_rels = set()
+                    for rel in gt_sent:
+                        if rel["type"] == rel_type:
+                            rel_head_start = int(rel["head"][0])
+                            rel_head_end = int(rel["head"][1])
+                            rel_tail_start = int(rel["tail"][0])
+                            rel_tail_end = int(rel["tail"][1])
+                            value = ((rel_head_start, rel_head_end), (rel_tail_start, rel_tail_end))
+                            gt_rels.add(value)
+                    print("pred_rels----", pred_rels)
+                    print("gt_rels----", gt_rels)
+
                 if self.all_reduce:
                     scores[rel_type]["tp"] += self.all_reduce(len(pred_rels & gt_rels))
                     scores[rel_type]["fp"] += self.all_reduce(len(pred_rels - gt_rels))

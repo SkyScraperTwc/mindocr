@@ -7,7 +7,7 @@ import numpy as np
 
 from mindspore import nn
 
-from mindocr.models.backbones.layout_xlm_ms import LayoutXLMTokenizer
+from mindocr.models.backbones.layout_xlm import LayoutXLMTokenizer
 from mindocr.utils.utility import load_vqa_bio_label_maps
 
 

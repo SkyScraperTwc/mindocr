@@ -1,5 +1,6 @@
 from ....infer import TextRecognizer
 from ...framework import ModuleBase
+from ....utils import log
 
 
 class RecInferNode(ModuleBase):
@@ -19,6 +20,7 @@ class RecInferNode(ModuleBase):
             return
 
         data = input_data.data
+        log.info(f"process-----rec_infer_node.py---")
 
         pred = self.text_recognizer.model_infer(data)
 

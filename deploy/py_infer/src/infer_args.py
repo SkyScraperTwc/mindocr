@@ -29,7 +29,8 @@ def get_args():
         choices=["acl", "lite"],
         help="Inference backend type.",
     )
-    parser.add_argument("--device", type=str, default="Ascend", required=False, choices=["Ascend"], help="Device type.")
+    parser.add_argument("--device", type=str, default="Ascend", required=False, choices=["Ascend", "CPU"],
+                        help="Device type.")
     parser.add_argument("--device_id", type=int, default=0, required=False, help="Device id.")
     parser.add_argument(
         "--parallel_num",

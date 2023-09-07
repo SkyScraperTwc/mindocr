@@ -148,7 +148,9 @@ class Evaluator:
                 for k in possible_keys_for_postprocess:
                     if k in self.loader_output_columns:
                         data_info[k] = data[self.loader_output_columns.index(k)]
-
+                print("self.input_indices----", self.input_indices)
+                print("self.label_indices----", self.label_indices)
+                print("self.loader_output_columns----", self.loader_output_columns)
                 preds = self.postprocessor(preds, **data_info)
 
             # metric internal update

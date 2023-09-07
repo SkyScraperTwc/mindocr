@@ -33,7 +33,7 @@ class LossFromOutput(nn.LossBase):
         self.key = key
         self.reduction = reduction
 
-    def construct(self, predicts, batch):
+    def construct(self, predicts, entities, relations):
         loss = predicts
         if self.key is not None and isinstance(predicts, dict):
             loss = loss[self.key]

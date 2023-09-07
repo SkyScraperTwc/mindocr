@@ -1,5 +1,6 @@
 from ....infer import TaskType, TextRecognizer
 from ...framework import ModuleBase
+from ....utils import log
 
 
 class RecPostNode(ModuleBase):
@@ -17,6 +18,7 @@ class RecPostNode(ModuleBase):
         if input_data.skip:
             self.send_to_next_module(input_data)
             return
+        log.info(f"process---post--{input_data.image_path}---")
 
         data = input_data.data
         batch = len(input_data.image_path) if self.task_type == TaskType.REC else input_data.sub_image_size
